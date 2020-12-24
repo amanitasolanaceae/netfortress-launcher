@@ -138,7 +138,7 @@ Please browse the Switches menu to turn them off or back on.
 print(disclaimer)
 love.filesystem.setIdentity( "netfortress" )
 local http = require("socket.http")
-local manifest = http.request("http://sabbath.vineyard.haus/netfortress/client/manifest.txt")
+local manifest = http.request("http://sabbath.vineyard.haus/netfortress/manifest.txt")
 local sha = require("sha")
 local tobool = require("toboolean")
 local inspect = require("inspect")
@@ -203,54 +203,58 @@ while( true ) do
 				local path = string.gsub(string.gsub(v, "%s+", ""), "\\", "/")
 				local info = love.filesystem.getInfo( path );
 				local skip = false
-				if( info ) then
-					local b, r, h = http.request( { url = "http://sabbath.vineyard.haus/netfortress/client/" .. path, method = "HEAD" } )
-					local fsize = tonumber(h["content-length"])
-					if( fsize == info.size ) then
-						print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") SKIPPED " .. v)
-						skip = true
-					end
-				end
-				if( not skip ) then
-					local file = http.request( "http://sabbath.vineyard.haus/netfortress/client/" .. path )
-					local dont = false
-					if( path == "keybinds.txt" and kbfile ) then
-						local opts = string.explode( file, "\n" )
-						if( #string.explode( kbfile, "\n" ) == #opts ) then
-							dont = true
+				if( path:match("^.+/(.+)$") ) then
+					if( info ) then
+						local b, r, h = http.request( { url = "http://sabbath.vineyard.haus/netfortress/" .. path, method = "HEAD" } )
+						local fsize = tonumber(h["content-length"])
+						if( fsize == info.size ) then
 							print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") SKIPPED " .. v)
-						else
-							clearedbinds = true
+							skip = true
 						end
 					end
-					if( path == "audiovisual.txt" and avfile ) then
-						local opts = string.explode( file, "\n" )
-						if( #string.explode( avfile, "\n" ) == #opts ) then
-							dont = true
-							print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") SKIPPED " .. v)
-						else
-							clearedav = true
-						end
-					end
-					if( not dont ) then
-						local direxp = string.explode( path, "/" );
-						if( #direxp > 1 ) then
-							local dir = "";
-							for i=1, #direxp - 1 do
-								local diridx = direxp[i];
-								dir = dir .. diridx .. "/";
+					if( not skip ) then
+						local file = http.request( "http://sabbath.vineyard.haus/netfortress/" .. path )
+						if( file ) then
+							local dont = false
+							if( path == "keybinds.txt" and kbfile ) then
+								local opts = string.explode( file, "\n" )
+								if( #string.explode( kbfile, "\n" ) == #opts ) then
+									dont = true
+									print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") SKIPPED " .. v)
+								else
+									clearedbinds = true
+								end
 							end
-							dir = string.sub( dir, 1, -2 );
-							love.filesystem.createDirectory( dir );
+							if( path == "audiovisual.txt" and avfile ) then
+								local opts = string.explode( file, "\n" )
+								if( #string.explode( avfile, "\n" ) == #opts ) then
+									dont = true
+									print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") SKIPPED " .. v)
+								else
+									clearedav = true
+								end
+							end
+							if( not dont ) then
+								local direxp = string.explode( path, "/" );
+								if( #direxp > 1 ) then
+									local dir = "";
+									for i=1, #direxp - 1 do
+										local diridx = direxp[i];
+										dir = dir .. diridx .. "/";
+									end
+									dir = string.sub( dir, 1, -2 );
+									love.filesystem.createDirectory( dir );
+								end
+								love.filesystem.write(path, file)
+								if( path == "keybinds.txt" ) then
+									kbfile = love.filesystem.read("keybinds.txt")
+								end
+								if( path == "audiovisual.txt" ) then
+									avfile = love.filesystem.read("audiovisual.txt")
+								end
+								print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") " .. v)
+							end
 						end
-						love.filesystem.write(path, file)
-						if( path == "keybinds.txt" ) then
-							kbfile = love.filesystem.read("keybinds.txt")
-						end
-						if( path == "audiovisual.txt" ) then
-							avfile = love.filesystem.read("audiovisual.txt")
-						end
-						print("Download progress: " .. math.floor( ((k - 1) / (#sploded - 1)) * 100 ) .. "% (" .. k - 1 .. "/" .. #sploded - 1 .. ") " .. v)
 					end
 				end
 			end
